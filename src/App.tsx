@@ -1,45 +1,64 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { sequence } from './giuco'
 import "./App.css";
 import Timer from "react-compound-timer";
 // Lines 5-8: Bring in chessboard and chess.js stuff
 import Chessboard from "chessboardjsx";
 import { ChessInstance, ShortMove } from "chess.js";
+import axios from "axios";
+import {getGames} from './utils/chesscom/games'
 const Chess = require("chess.js");
-const paddingStyle = {
-  padding: 5
-}
-const marginStyle = {
-  margin: 5
-}
+
+
 const App: React.FC = () => {
   const [chess] = useState<ChessInstance>(
     // Set initial state to FEN layout
-    new Chess("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+    new Chess()
   );
+
+
   const [fen, setFen] = useState(chess.fen());
+  const [moveNum, setMoveNum] = useState(0)
+
+  useEffect(() => {
+    console.log(getGames())
+  }, [])
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (sequence.color === "b") {
+        chess.move(sequence.moves[0])
+        setFen(chess.fen())
+        setMoveNum(moveNum + 1)
+      }
+    }, 300)
+  })
+
+
   // Logic for the setting up the random computer move.
   const handleMove = (move: ShortMove) => {
-    // Line 29 validates the user move.
-    if (chess.move(move)) {
-      setTimeout(() => {
-        const moves = chess.moves();
-        // Lines 33-28: Computer random move.
-        if (moves.length > 0) {
-          const computerMove = moves[Math.floor(Math.random() * moves.length)];
-          chess.move(computerMove);
-          setFen(chess.fen());
-        }
-      }, 300);
-      // Sets state of chess board
-      setFen(chess.fen());
+    let newMove = chess.move(move)
+    if (newMove) {
+      let moveString = newMove.san
+      console.log(moveString)
+      if (moveString == sequence.moves[moveNum]) {
+        setFen(chess.fen())
+
+        let otherMove = chess.move(sequence.moves[moveNum + 1], { sloppy: true })
+        console.log(otherMove?.san)
+        setFen(chess.fen())
+        setMoveNum(moveNum + 2)
+      }
     }
-  };
+  }
+
   return (
     <div className="flex-center">
       <h1>Random Chess Game</h1>
       <Chessboard
         width={400}
         position={fen}
+        orientation={sequence.color === "w" ? 'white' : 'black'}
         // onDrop prop tracks every time a piece is moved.
         // The rest is handled in the the handleMove function.
         onDrop={(move) =>
@@ -51,28 +70,6 @@ const App: React.FC = () => {
           })
         }
       />
-      {/* Timer code */}
-      <Timer initialTime={0} startImmediately={false}>
-        {/* I thought this was weird. Definitely a better way to do this, but I just wanted it to work. */}
-        {({ start, resume, pause, stop, reset, timerState } : {start:any, resume:any, pause:any, stop:any, reset:any, timerState:any}) => (
-            <>
-                <div>
-                    <span style={paddingStyle}><Timer.Minutes /> minutes</span>
-                    <span style={paddingStyle}><Timer.Seconds /> seconds</span>
-                    <span style={paddingStyle}><Timer.Milliseconds /> milliseconds</span>
-                </div>
-                <div style={paddingStyle}>{timerState}</div>
-                <br />
-                <div>
-                    <button style={marginStyle} onClick={start}>Start</button>
-                    <button style={marginStyle} onClick={pause}>Pause</button>
-                    <button style={marginStyle} onClick={resume}>Resume</button>
-                    <button style={marginStyle} onClick={stop}>Stop</button>
-                    <button style={marginStyle} onClick={reset}>Reset</button>
-                </div>
-            </>
-        )}
-      </Timer>
     </div>
   );
 };
